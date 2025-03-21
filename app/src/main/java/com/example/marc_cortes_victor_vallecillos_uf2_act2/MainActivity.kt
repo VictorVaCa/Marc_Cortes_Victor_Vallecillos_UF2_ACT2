@@ -17,7 +17,7 @@ class MainActivity : AppCompatActivity() {
         // Inicialitzar SoundPool
         soundPool = SoundPool.Builder().setMaxStreams(10).build()
 
-        // Cargar les notes al SoundPool
+        // Carregar les notes al SoundPool
         loadNotes()
 
         // Assignar un listener a cada botó
