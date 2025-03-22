@@ -1,9 +1,11 @@
 package com.example.marc_cortes_victor_vallecillos_uf2_act2
 
 import android.media.SoundPool
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.view.MotionEvent
+import android.view.View
 import android.widget.ImageButton
+import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
 
@@ -14,25 +16,32 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Inicialitzar SoundPool
+        // Inicializar SoundPool con multitouch
         soundPool = SoundPool.Builder().setMaxStreams(10).build()
-
-        // Carregar les notes al SoundPool
         loadNotes()
 
-        // Assignar un listener a cada botó
-        val buttons = arrayOf(
+        // Asignar listeners a cada tecla
+        val buttonIds = arrayOf(
             R.id.c2, R.id.cs2, R.id.d2, R.id.ds2, R.id.e2, R.id.f2, R.id.fs2,
             R.id.g2, R.id.gs2, R.id.a2, R.id.as2, R.id.b2, R.id.c3, R.id.cs3,
             R.id.d3, R.id.ds3, R.id.e3, R.id.f3, R.id.fs3, R.id.g3, R.id.gs3,
             R.id.a3, R.id.as3, R.id.b3, R.id.c4
         )
 
-        for (buttonId in buttons) {
+        for (buttonId in buttonIds) {
             val button = findViewById<ImageButton>(buttonId)
-            button.setOnClickListener {
+            button.setOnTouchListener { v, event ->
                 val noteName = resources.getResourceEntryName(buttonId)
-                playNote(noteName)
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        playNote(noteName)
+                        v.isPressed = true
+                    }
+                    MotionEvent.ACTION_UP -> {
+                        v.isPressed = false
+                    }
+                }
+                true
             }
         }
     }
@@ -67,13 +76,13 @@ class MainActivity : AppCompatActivity() {
 
     private fun playNote(noteName: String) {
         val soundId = noteSounds[noteName]
-        if (soundId != null) {
-            soundPool.play(soundId, 1f, 1f, 0, 0, 1f)
+        soundId?.let {
+            soundPool.play(it, 1f, 1f, 0, 0, 1f)
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        soundPool.release() // Alliberar recursos al final
+        soundPool.release() // Liberar recursos al final
     }
 }
