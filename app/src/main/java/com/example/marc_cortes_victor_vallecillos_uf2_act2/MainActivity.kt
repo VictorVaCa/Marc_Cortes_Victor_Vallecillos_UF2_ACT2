@@ -11,39 +11,86 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var soundPool: SoundPool
     private val noteSounds = mutableMapOf<String, Int>()
+    private val activeTouches = mutableMapOf<Int, View>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Inicializar SoundPool con multitouch
-        soundPool = SoundPool.Builder().setMaxStreams(10).build()
+        soundPool = SoundPool.Builder().setMaxStreams(26).build()
         loadNotes()
 
-        // Asignar listeners a cada tecla
         val buttonIds = arrayOf(
             R.id.c2, R.id.cs2, R.id.d2, R.id.ds2, R.id.e2, R.id.f2, R.id.fs2,
             R.id.g2, R.id.gs2, R.id.a2, R.id.as2, R.id.b2, R.id.c3, R.id.cs3,
             R.id.d3, R.id.ds3, R.id.e3, R.id.f3, R.id.fs3, R.id.g3, R.id.gs3,
-            R.id.a3, R.id.as3, R.id.b3, R.id.c4
+            R.id.a3, R.id.as3, R.id.b3, R.id.c4, R.id.cs4
         )
 
-        for (buttonId in buttonIds) {
-            val button = findViewById<ImageButton>(buttonId)
-            button.setOnTouchListener { v, event ->
-                val noteName = resources.getResourceEntryName(buttonId)
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        playNote(noteName)
-                        v.isPressed = true
-                    }
-                    MotionEvent.ACTION_UP -> {
-                        v.isPressed = false
-                    }
+        buttonIds.forEach { id ->
+            findViewById<ImageButton>(id).apply {
+                setOnTouchListener { v, event ->
+                    handleTouchEvent(v, event)
                 }
-                true
             }
         }
+    }
+
+    private fun handleTouchEvent(view: View, event: MotionEvent): Boolean {
+        val pointerId = event.getPointerId(0)
+
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                handleKeyPress(view, pointerId)
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val x = event.rawX
+                val y = event.rawY
+                val currentKey = findKeyAtPosition(x, y)
+
+                if (currentKey != null && currentKey != activeTouches[pointerId]) {
+                    // El dedo se ha movido a una nueva tecla
+                    releaseAllKeys()
+                    handleKeyPress(currentKey, pointerId)
+                } else if (currentKey == null) {
+                    // El dedo se ha movido fuera de cualquier tecla
+                    releaseAllKeys()
+                }
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                releaseAllKeys()
+            }
+        }
+        return true
+    }
+
+    private fun handleKeyPress(view: View, pointerId: Int) {
+        val noteName = resources.getResourceEntryName(view.id)
+        view.isPressed = true
+        playNote(noteName)
+        activeTouches[pointerId] = view
+    }
+
+    private fun releaseAllKeys() {
+        activeTouches.values.forEach { it.isPressed = false }
+        activeTouches.clear()
+    }
+
+    private fun findKeyAtPosition(x: Float, y: Float): View? {
+        return listOf(
+            R.id.c2, R.id.cs2, R.id.d2, R.id.ds2, R.id.e2, R.id.f2, R.id.fs2,
+            R.id.g2, R.id.gs2, R.id.a2, R.id.as2, R.id.b2, R.id.c3, R.id.cs3,
+            R.id.d3, R.id.ds3, R.id.e3, R.id.f3, R.id.fs3, R.id.g3, R.id.gs3,
+            R.id.a3, R.id.as3, R.id.b3, R.id.c4, R.id.cs4
+        ).map { findViewById<View>(it) }
+            .firstOrNull { isTouchInsideView(x, y, it) }
+    }
+
+    private fun isTouchInsideView(x: Float, y: Float, view: View): Boolean {
+        val location = IntArray(2)
+        view.getLocationOnScreen(location)
+        return x >= location[0] && x < location[0] + view.width &&
+                y >= location[1] && y < location[1] + view.height
     }
 
     private fun loadNotes() {
@@ -72,6 +119,7 @@ class MainActivity : AppCompatActivity() {
         noteSounds["as3"] = soundPool.load(this, R.raw.as3, 1)
         noteSounds["b3"] = soundPool.load(this, R.raw.b3, 1)
         noteSounds["c4"] = soundPool.load(this, R.raw.c4, 1)
+        noteSounds["cs4"] = soundPool.load(this, R.raw.cs4, 1)
     }
 
     private fun playNote(noteName: String) {
